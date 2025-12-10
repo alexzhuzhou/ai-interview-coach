@@ -49,6 +49,8 @@ function App() {
       );
       setSessionDuration(duration);
     }
+    // Call endConversation (async) but don't wait for it
+    // This ensures the API call to end the conversation happens in the background
     endConversation();
     setScreen('feedback');
   }, [endConversation]);

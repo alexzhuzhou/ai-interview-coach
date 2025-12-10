@@ -26,13 +26,7 @@ export function FeedbackScreen({ duration, conversationId, interviewConfig, onRe
         setLoading(true);
         setError(null);
 
-        // Development mode: Call API directly (will need to proxy through Vercel in production)
-        const isDev = import.meta.env.DEV;
-        const apiUrl = isDev
-          ? '/api/generate-feedback'
-          : '/api/generate-feedback';
-
-        const response = await fetch(apiUrl, {
+        const response = await fetch('/api/generate-feedback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Briefcase } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Briefcase, Code, Users } from 'lucide-react';
 import type { InterviewConfig } from '../types';
 
 interface Props {
@@ -35,13 +35,14 @@ const INTERVIEW_TYPES = [
 
 export function SetupScreen({ onBack, onStart, isLoading, error }: Props) {
   const [config, setConfig] = useState<InterviewConfig>({
+    category: 'general',
     role: '',
     industry: 'Technology',
     experienceLevel: 'mid',
     interviewType: 'mixed',
   });
 
-  const isValid = config.role.trim().length > 0;
+  const isValid = config.category === 'leetcode' || config.role.trim().length > 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,8 +76,50 @@ export function SetupScreen({ onBack, onStart, isLoading, error }: Props) {
               </div>
             )}
 
-            {/* Role Input */}
+            {/* Interview Category Selection */}
             <div>
+              <label className="block text-sm font-medium text-slate-300 mb-3">
+                Interview Category *
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setConfig({ ...config, category: 'general' })}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                    config.category === 'general'
+                      ? 'border-blue-500 bg-blue-500/10'
+                      : 'border-slate-600 bg-slate-700/50 hover:border-slate-500'
+                  }`}
+                >
+                  <Users className="w-6 h-6 text-blue-400" />
+                  <div className="text-left">
+                    <div className="font-semibold">General Interview</div>
+                    <div className="text-xs text-slate-400">Behavioral & role-specific</div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfig({ ...config, category: 'leetcode' })}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                    config.category === 'leetcode'
+                      ? 'border-blue-500 bg-blue-500/10'
+                      : 'border-slate-600 bg-slate-700/50 hover:border-slate-500'
+                  }`}
+                >
+                  <Code className="w-6 h-6 text-green-400" />
+                  <div className="text-left">
+                    <div className="font-semibold">LeetCode Style</div>
+                    <div className="text-xs text-slate-400">Coding & algorithms</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Conditional Fields for General Interview */}
+            {config.category === 'general' && (
+              <>
+                {/* Role Input */}
+                <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 Target Role *
               </label>
@@ -152,6 +195,17 @@ export function SetupScreen({ onBack, onStart, isLoading, error }: Props) {
                 ))}
               </select>
             </div>
+              </>
+            )}
+
+            {/* LeetCode Description */}
+            {config.category === 'leetcode' && (
+              <div className="bg-green-500/10 border border-green-500/50 rounded-lg p-4">
+                <p className="text-green-400 text-sm">
+                  Get ready for a coding interview! You'll be asked to solve algorithmic problems and explain your approach.
+                </p>
+              </div>
+            )}
 
             {/* Submit Button */}
             <button

@@ -1,0 +1,194 @@
+const TAVUS_API_KEY = process.env.TAVUS_API_KEY;
+const TAVUS_BASE_URL = 'https://tavusapi.com/v2';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const { conversationId, interviewConfig } = req.body;
+
+    if (!conversationId) {
+      return res.status(400).json({ error: 'conversationId is required' });
+    }
+
+    if (!TAVUS_API_KEY) {
+      return res.status(500).json({ error: 'TAVUS_API_KEY not configured' });
+    }
+
+    if (!OPENAI_API_KEY) {
+      return res.status(500).json({ error: 'OPENAI_API_KEY not configured' });
+    }
+
+    // Fetch conversation data from Tavus with verbose=true to get transcript
+    const conversationResponse = await fetch(
+      `${TAVUS_BASE_URL}/conversations/${conversationId}?verbose=true`,
+      {
+        method: 'GET',
+        headers: {
+          'x-api-key': TAVUS_API_KEY,
+        },
+      }
+    );
+
+    if (!conversationResponse.ok) {
+      const errorText = await conversationResponse.text();
+      console.error('Failed to fetch conversation:', errorText);
+      return res.status(conversationResponse.status).json({
+        error: `Failed to fetch conversation: ${errorText.substring(0, 200)}`,
+      });
+    }
+
+    const conversationData = await conversationResponse.json();
+
+    // Log all available event types for debugging
+    const availableEventTypes = conversationData.events?.map(e => e.event_type) || [];
+    console.log('Available event types:', availableEventTypes);
+
+    // Extract transcript from events array
+    const transcriptEvent = conversationData.events?.find(
+      (event) => event.event_type === 'application.transcription_ready'
+    );
+    let transcript = transcriptEvent?.properties?.transcript || [];
+
+    // Extract perception analysis from events array
+    const perceptionEvent = conversationData.events?.find(
+      (event) => event.event_type === 'application.perception_analysis'
+    );
+    let perceptionAnalysis = perceptionEvent?.properties?.analysis || null;
+
+    console.log('Conversation data:', {
+      hasTranscript: !!transcript.length,
+      transcriptLength: transcript.length,
+      hasPerceptionAnalysis: !!perceptionAnalysis,
+      status: conversationData.status,
+      hasEvents: !!conversationData.events,
+      eventCount: conversationData.events?.length || 0,
+    });
+
+    // If transcript not ready, wait 10 seconds and retry once
+    if (transcript.length === 0) {
+      console.log('Transcript not ready, waiting 10 seconds and retrying...');
+      await new Promise(resolve => setTimeout(resolve, 10000));
+
+      const retryResponse = await fetch(
+        `${TAVUS_BASE_URL}/conversations/${conversationId}?verbose=true`,
+        {
+          method: 'GET',
+          headers: {
+            'x-api-key': TAVUS_API_KEY,
+          },
+        }
+      );
+
+      if (retryResponse.ok) {
+        const retryData = await retryResponse.json();
+
+        // Extract transcript from events array
+        const retryTranscriptEvent = retryData.events?.find(
+          (event) => event.event_type === 'application.transcription_ready'
+        );
+        transcript = retryTranscriptEvent?.properties?.transcript || [];
+
+        // Extract perception analysis from events array
+        const retryPerceptionEvent = retryData.events?.find(
+          (event) => event.event_type === 'application.perception_analysis'
+        );
+        perceptionAnalysis = retryPerceptionEvent?.properties?.analysis || null;
+
+        console.log('Retry conversation data:', {
+          hasTranscript: !!transcript.length,
+          transcriptLength: transcript.length,
+          hasPerceptionAnalysis: !!perceptionAnalysis,
+          status: retryData.status,
+        });
+      }
+
+      // If still no transcript, return helpful message
+      if (transcript.length === 0) {
+        return res.status(200).json({
+          feedback: `# Interview Feedback\n\n⚠️ No transcript available yet. The conversation may still be processing.\n\n## What You Can Do:\n- The interview may have been too short to generate a transcript\n- Try having a longer conversation (at least 1-2 minutes)\n- Wait a few moments and refresh the page\n\n**Tip:** For best results, have a natural conversation with the interviewer for at least 2-3 questions.`,
+        });
+      }
+    }
+
+    // Format transcript for analysis
+    const formattedTranscript = transcript
+      .map((msg) => `${msg.role}: ${msg.content}`)
+      .join('\n\n');
+
+    // Generate feedback using OpenAI
+    const feedback = await generateFeedback(formattedTranscript, interviewConfig, perceptionAnalysis);
+
+    return res.status(200).json({ feedback });
+  } catch (error) {
+    console.error('Error generating feedback:', error);
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
+async function generateFeedback(
+  transcript,
+  config,
+  perceptionAnalysis
+) {
+  // Prepare perception analysis text if available
+  const perceptionText = perceptionAnalysis
+    ? `\n\nVisual Analysis:
+${JSON.stringify(perceptionAnalysis, null, 2)}`
+    : '';
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an expert interview coach providing constructive feedback on mock interviews. Analyze both the transcript and visual analysis to provide detailed, actionable feedback.
+
+Focus on:
+1. **Communication Skills**: Clarity, confidence, pacing, and articulation
+2. **STAR Method**: Did they structure answers with Situation, Task, Action, Result?
+3. **Content Quality**: Specific examples, relevant experience, depth of answers
+4. **Non-Verbal Communication**: If visual analysis is provided, comment on body language, eye contact, facial expressions, and on-camera presence
+5. **Areas for Improvement**: Concrete suggestions with examples
+6. **Strengths**: What they did well and should continue doing
+
+Format your response in markdown with clear sections and bullet points.`,
+        },
+        {
+          role: 'user',
+          content: `Interview Details:
+- Role: ${config.role}
+- Industry: ${config.industry}
+- Experience Level: ${config.experienceLevel}
+- Interview Type: ${config.interviewType}
+
+Transcript:
+${transcript}${perceptionText}
+
+Provide detailed, constructive feedback.`,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content;
+}

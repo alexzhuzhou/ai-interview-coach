@@ -32,9 +32,15 @@ export function InterviewScreen({ conversationUrl, onEnd }: Props) {
   // Handle leaving the call
   const handleLeave = useCallback(async () => {
     if (callRef.current) {
-      await callRef.current.leave();
-      callRef.current.destroy();
-      callRef.current = null;
+      const callInstance = callRef.current;
+      try {
+        await callInstance.leave();
+        callInstance.destroy();
+      } catch (err) {
+        console.error('Error leaving call:', err);
+      } finally {
+        callRef.current = null;
+      }
     }
     onEnd();
   }, [onEnd]);
@@ -82,9 +88,14 @@ export function InterviewScreen({ conversationUrl, onEnd }: Props) {
 
     return () => {
       if (callRef.current) {
-        callRef.current.leave();
-        callRef.current.destroy();
-        callRef.current = null;
+        try {
+          callRef.current.leave();
+          callRef.current.destroy();
+        } catch (err) {
+          console.error('Cleanup error:', err);
+        } finally {
+          callRef.current = null;
+        }
       }
     };
   }, [conversationUrl, handleLeave]);

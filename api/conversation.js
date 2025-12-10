@@ -1,0 +1,171 @@
+// Vercel serverless function
+const TAVUS_API_KEY = process.env.TAVUS_API_KEY;
+const TAVUS_BASE_URL = 'https://tavusapi.com/v2';
+const REPLICA_ID = process.env.REPLICA_ID;
+const LEET_CODE_PERSONA_ID = process.env.LEET_CODE_PERSONA_ID;
+const GENERAL_RECRUITER_ID = process.env.GENERAL_RECRUITER_ID;
+
+function generateSystemPrompt(config) {
+  return `You are an experienced hiring manager conducting a ${config.interviewType} interview for a ${config.experienceLevel} ${config.role} position in the ${config.industry} industry.
+
+INTERVIEW GUIDELINES:
+- Start with a warm, professional greeting and brief introduction
+- Ask 4-5 questions total, mixing behavioral and role-specific questions
+- Use the STAR method to probe deeper on behavioral questions (ask follow-ups like "What was the result?" or "How did you handle that specifically?")
+- Be encouraging but professional - nod, say "great" or "interesting" naturally
+- Keep track of which questions you've asked - don't repeat
+- After 4-5 questions, wrap up professionally and thank the candidate
+
+QUESTION TYPES TO INCLUDE:
+1. An icebreaker ("Tell me about yourself" or "Walk me through your background")
+2. A behavioral question ("Tell me about a time when...")
+3. A role-specific technical or situational question
+4. A question about challenges or failures (growth mindset)
+5. Candidate's questions ("What questions do you have for me?")
+
+CONVERSATION STYLE:
+- Speak naturally and conversationally, not robotically
+- React to their answers briefly before moving on
+- If an answer is vague, ask ONE clarifying follow-up
+- Keep your responses concise (2-3 sentences max between questions)
+- Maintain a ${config.experienceLevel === 'entry' ? 'supportive and encouraging' : 'professional and direct'} tone
+
+END THE INTERVIEW:
+- After the candidate asks their questions (or declines), thank them warmly
+- Mention that they'll "hear back soon" (standard interview closing)
+- Say goodbye professionally`;
+}
+
+function generateGreeting(config, category) {
+  if (category === 'leetcode') {
+    return "Hi there! Ready to solve some coding problems together? Let's get started!";
+  }
+  return `Hi there! Thanks for joining me today. I'm excited to learn more about you and your interest in the ${config.role} position. Let's get started - are you ready?`;
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Validate environment variables
+  if (!TAVUS_API_KEY) {
+    return res.status(500).json({ error: 'TAVUS_API_KEY environment variable is not set' });
+  }
+  if (!REPLICA_ID) {
+    return res.status(500).json({ error: 'REPLICA_ID environment variable is not set' });
+  }
+  if (!LEET_CODE_PERSONA_ID) {
+    return res.status(500).json({ error: 'LEET_CODE_PERSONA_ID environment variable is not set' });
+  }
+  if (!GENERAL_RECRUITER_ID) {
+    return res.status(500).json({ error: 'GENERAL_RECRUITER_ID environment variable is not set' });
+  }
+
+  try {
+    const { category, role, industry, experienceLevel, interviewType } = req.body;
+
+    console.log('Starting interview:', { category, role, industry, experienceLevel, interviewType });
+
+    let personaId;
+
+    // Determine which persona to use based on category
+    if (category === 'leetcode') {
+      // Use LeetCode persona directly (no patching needed)
+      personaId = LEET_CODE_PERSONA_ID;
+      console.log('Using LeetCode persona:', personaId);
+    } else if (category === 'general') {
+      // PATCH the General Recruiter persona with user's custom settings
+      personaId = GENERAL_RECRUITER_ID;
+      console.log('Patching General Recruiter persona:', personaId);
+
+      const patchOperations = [
+        {
+          op: 'replace',
+          path: '/system_prompt',
+          value: generateSystemPrompt({ role, industry, experienceLevel, interviewType })
+        },
+        {
+          op: 'replace',
+          path: '/context',
+          value: `Interviewing for: ${role} in ${industry}. Candidate level: ${experienceLevel}. Interview type: ${interviewType}.`
+        }
+      ];
+
+      const patchResponse = await fetch(`${TAVUS_BASE_URL}/personas/${personaId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': TAVUS_API_KEY,
+        },
+        body: JSON.stringify(patchOperations),
+      });
+
+      if (!patchResponse.ok) {
+        const error = await patchResponse.text();
+        console.error('Persona patch failed:', {
+          status: patchResponse.status,
+          statusText: patchResponse.statusText,
+          error,
+        });
+        return res.status(500).json({
+          error: 'Failed to update persona',
+          details: error,
+          status: patchResponse.status
+        });
+      }
+
+      console.log('Persona patched successfully');
+    } else {
+      return res.status(400).json({ error: 'Invalid interview category' });
+    }
+
+    // Create conversation with the selected/patched persona
+    const conversationResponse = await fetch(`${TAVUS_BASE_URL}/conversations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': TAVUS_API_KEY,
+      },
+      body: JSON.stringify({
+        replica_id: REPLICA_ID,
+        persona_id: personaId,
+        custom_greeting: generateGreeting({ role, industry, experienceLevel, interviewType }, category),
+        properties: {
+          max_call_duration: 600,  // 10 minutes max
+          participant_left_timeout: 30,
+          enable_recording: true,
+          language: 'english',
+        },
+      }),
+    });
+
+    if (!conversationResponse.ok) {
+      const error = await conversationResponse.text();
+      console.error('Conversation creation failed:', {
+        status: conversationResponse.status,
+        statusText: conversationResponse.statusText,
+        error,
+      });
+      return res.status(500).json({
+        error: 'Failed to create conversation',
+        details: error,
+        status: conversationResponse.status
+      });
+    }
+
+    const conversation = await conversationResponse.json();
+
+    return res.status(200).json({
+      conversationId: conversation.conversation_id,
+      conversationUrl: conversation.conversation_url,
+    });
+
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+}

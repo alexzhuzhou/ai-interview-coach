@@ -1,4 +1,5 @@
 export interface InterviewConfig {
+  category: 'leetcode' | 'general';
   role: string;
   industry: string;
   experienceLevel: 'entry' | 'mid' | 'senior' | 'executive';
