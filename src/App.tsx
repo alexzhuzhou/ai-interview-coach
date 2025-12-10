@@ -1,71 +1,124 @@
-import React, { useState } from "react";
-import { CVIProvider } from "./components/cvi/components/cvi-provider";
-import { Conversation } from "./components/cvi/components/conversation";
+import { useState, useCallback, useRef } from 'react';
+import { LandingPage } from './components/LandingPage';
+import { SetupScreen } from './components/SetupScreen';
+import { InterviewScreen } from './components/InterviewScreen';
+import { FeedbackScreen } from './components/FeedbackScreen';
+import { useConversation } from './hooks/useConversation';
+import type { AppScreen, InterviewConfig } from './types';
 
-const App: React.FC = () => {
-  const [conversationUrl, setConversationUrl] = useState<string | null>(null);
+function App() {
+  const [screen, setScreen] = useState<AppScreen>('landing');
+  const {
+    status,
+    conversationId,
+    conversationUrl,
+    error,
+    startConversation,
+    endConversation,
+    reset
+  } = useConversation();
 
-  const createConversation = async () => {
-    const response = await fetch("https://tavusapi.com/v2/conversations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": import.meta.env.VITE_TAVUS_API_KEY || "",
-      },
-      body: JSON.stringify({
-        replica_id: import.meta.env.VITE_REPLICA_ID || "rfe12d8b9597",
-        persona_id: import.meta.env.VITE_PERSONA_ID || "pdced222244b",
-      }),
-    });
+  const sessionStartRef = useRef<Date | null>(null);
+  const [sessionDuration, setSessionDuration] = useState(0);
+  const [interviewConfig, setInterviewConfig] = useState<InterviewConfig | null>(null);
 
-    const data = await response.json();
-    setConversationUrl(data.conversation_url);
-  };
+  const handleStartSetup = useCallback(() => {
+    setScreen('setup');
+  }, []);
 
-  return (
-    <CVIProvider>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          width: "100vw",
-          height: "100vh",
-          backgroundColor: "#1e1e1e",
-          color: "#fff",
-          textAlign: "center",
-          flexDirection: "column",
-          margin: 0,
-          padding: 0,
-        }}
-      >
-        <h1 style={{ marginBottom: "1rem" }}>Tavus CVI Integration (Vite)</h1>
-        {!conversationUrl ? (
-          <button
-            onClick={createConversation}
-            style={{
-              padding: "0.75rem 1.5rem",
-              fontSize: "1rem",
-              background: "#6a0dad",
-              color: "#fff",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
+  const handleBack = useCallback(() => {
+    setScreen('landing');
+    reset();
+  }, [reset]);
+
+  const handleStartInterview = useCallback(async (config: InterviewConfig) => {
+    try {
+      setInterviewConfig(config);
+      await startConversation(config);
+      sessionStartRef.current = new Date();
+      setScreen('interview');
+    } catch (error) {
+      console.error('Failed to start interview:', error);
+    }
+  }, [startConversation]);
+
+  const handleEndInterview = useCallback(() => {
+    if (sessionStartRef.current) {
+      const duration = Math.floor(
+        (new Date().getTime() - sessionStartRef.current.getTime()) / 1000
+      );
+      setSessionDuration(duration);
+    }
+    endConversation();
+    setScreen('feedback');
+  }, [endConversation]);
+
+  const handleRestart = useCallback(() => {
+    reset();
+    setScreen('setup');
+  }, [reset]);
+
+  const handleHome = useCallback(() => {
+    reset();
+    setScreen('landing');
+  }, [reset]);
+
+  switch (screen) {
+    case 'landing':
+      return <LandingPage onStart={handleStartSetup} />;
+
+    case 'setup':
+      return (
+        <SetupScreen
+          onBack={handleBack}
+          onStart={handleStartInterview}
+          isLoading={status === 'loading'}
+          error={error}
+        />
+      );
+
+    case 'interview':
+      if (!conversationUrl) {
+        return <SetupScreen onBack={handleBack} onStart={handleStartInterview} isLoading={true} error={error} />;
+      }
+      return (
+        <InterviewScreen
+          conversationUrl={conversationUrl}
+          onEnd={handleEndInterview}
+        />
+      );
+
+    case 'feedback':
+      if (!conversationId || !interviewConfig) {
+        // Fallback if no conversation data
+        return (
+          <FeedbackScreen
+            duration={sessionDuration}
+            conversationId=""
+            interviewConfig={{
+              role: 'Unknown',
+              industry: 'Technology',
+              experienceLevel: 'mid',
+              interviewType: 'mixed',
             }}
-          >
-            Start Conversation
-          </button>
-        ) : (
-          <div style={{ width: "100%", maxWidth: "800px" }}>
-            <Conversation
-              conversationUrl={conversationUrl}
-              onLeave={() => setConversationUrl(null)}
-            />
-          </div>
-        )}
-      </div>
-    </CVIProvider>
-  );
-};
+            onRestart={handleRestart}
+            onHome={handleHome}
+          />
+        );
+      }
+      return (
+        <FeedbackScreen
+          duration={sessionDuration}
+          conversationId={conversationId}
+          interviewConfig={interviewConfig}
+          onRestart={handleRestart}
+          onHome={handleHome}
+        />
+      );
+
+    default:
+      return <LandingPage onStart={handleStartSetup} />;
+  }
+}
 
 export default App;

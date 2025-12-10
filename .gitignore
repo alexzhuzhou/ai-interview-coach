@@ -22,4 +22,19 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Environment files (CRITICAL: Contains API keys!)
 .env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel
+
+# Documentation (local only)
+CLAUDE.md
+interview-coach-plan.md
+
+# OS files
+Thumbs.db
+
+FEEDBACK_PLAN.md
