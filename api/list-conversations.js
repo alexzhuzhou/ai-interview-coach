@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch(`${TAVUS_BASE_URL}/conversations`, {
+    const response = await fetch(`${TAVUS_BASE_URL}/conversations?limit=100`, {
       method: 'GET',
       headers: {
         'x-api-key': TAVUS_API_KEY,

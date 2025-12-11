@@ -27,16 +27,24 @@ export function ConversationHistory({ onSelectConversation }: Props) {
         const data = await response.json();
 
         // Handle different response formats
+        let conversationList: ConversationListItem[] = [];
         if (Array.isArray(data)) {
-          setConversations(data);
+          conversationList = data;
         } else if (data.data && Array.isArray(data.data)) {
           // Tavus API returns { data: [...], total_count: N }
-          setConversations(data.data);
+          conversationList = data.data;
         } else if (data.conversations && Array.isArray(data.conversations)) {
-          setConversations(data.conversations);
-        } else {
-          setConversations([]);
+          conversationList = data.conversations;
         }
+
+        // Sort by created_at date, newest first
+        conversationList.sort((a, b) => {
+          const dateA = new Date(a.created_at).getTime();
+          const dateB = new Date(b.created_at).getTime();
+          return dateB - dateA; // Descending order (newest first)
+        });
+
+        setConversations(conversationList);
       } catch (err) {
         console.error('Failed to load conversations:', err);
         setError(err instanceof Error ? err.message : 'Failed to load conversation history');

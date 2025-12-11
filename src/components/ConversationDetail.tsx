@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Clock, User, Bot, Loader2, AlertCircle, Brain, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Clock, User, Bot, Loader2, AlertCircle, Brain, MessageSquare, Video, Info } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { ConversationDetail } from '../types';
 
@@ -12,6 +12,17 @@ export function ConversationDetailComponent({ conversationId, onBack }: Props) {
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Recording state
+  const [recordingData, setRecordingData] = useState<{
+    url: string | null;
+    status: 'checking' | 'ready' | 'processing' | 'not_configured' | 'not_available' | 'error';
+    message: string;
+  }>({
+    url: null,
+    status: 'checking',
+    message: ''
+  });
 
   useEffect(() => {
     async function loadConversation() {
@@ -37,6 +48,39 @@ export function ConversationDetailComponent({ conversationId, onBack }: Props) {
     }
 
     loadConversation();
+  }, [conversationId]);
+
+  // Load recording URL
+  useEffect(() => {
+    async function loadRecording() {
+      try {
+        const response = await fetch(`/api/get-recording-url?conversation_id=${conversationId}`);
+
+        if (response.ok) {
+          const data = await response.json();
+          setRecordingData({
+            url: data.recording_url,
+            status: data.status,
+            message: data.message
+          });
+        } else {
+          setRecordingData({
+            url: null,
+            status: 'not_available',
+            message: 'Recording not available for this conversation'
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load recording:', err);
+        setRecordingData({
+          url: null,
+          status: 'error',
+          message: 'Failed to check recording status'
+        });
+      }
+    }
+
+    loadRecording();
   }, [conversationId]);
 
   const formatDate = (dateString: string) => {
@@ -144,6 +188,110 @@ export function ConversationDetailComponent({ conversationId, onBack }: Props) {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Recording Player */}
+        <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 mb-6">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <Video className="w-5 h-5 text-red-400" />
+            Interview Recording
+          </h2>
+
+          {/* Case 1: Recording Ready ✅ */}
+          {recordingData.status === 'ready' && recordingData.url && (
+            <div>
+              <video
+                controls
+                className="w-full rounded-lg bg-black"
+                src={recordingData.url}
+              >
+                Your browser does not support the video tag.
+              </video>
+              <p className="text-xs text-slate-400 mt-2">
+                💡 Video link expires in 1 hour. Refresh page to generate a new link.
+              </p>
+            </div>
+          )}
+
+          {/* Case 2: Still Processing ⏳ */}
+          {recordingData.status === 'processing' && (
+            <div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Clock className="w-5 h-5 text-yellow-400 mt-0.5 animate-pulse" />
+                <div className="flex-1">
+                  <p className="text-yellow-400 font-medium mb-1">Processing Recording</p>
+                  <p className="text-sm text-yellow-300/80 mb-3">
+                    {recordingData.message}
+                  </p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm transition-colors"
+                  >
+                    Refresh to Check
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Case 3: Checking... */}
+          {recordingData.status === 'checking' && (
+            <div className="text-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-400 mb-3" />
+              <p className="text-slate-400">Checking for recording...</p>
+            </div>
+          )}
+
+          {/* Case 4: Recording Feature Not Configured ⚙️ */}
+          {recordingData.status === 'not_configured' && (
+            <div className="bg-slate-700/30 border border-slate-600 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-slate-400 mt-0.5" />
+                <div>
+                  <p className="text-slate-300 font-medium mb-1">Recording Not Available</p>
+                  <p className="text-sm text-slate-400">
+                    {recordingData.message}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Case 5: Recording Not Available (Old Conversation) 🚫 */}
+          {recordingData.status === 'not_available' && (
+            <div className="bg-slate-700/30 border border-slate-600 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-slate-400 mt-0.5" />
+                <div>
+                  <p className="text-slate-300 font-medium mb-1">Recording Not Available</p>
+                  <p className="text-sm text-slate-400">
+                    {recordingData.message || 'This conversation does not have a recording. This may be an older conversation created before recording was enabled.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Case 6: Error ❌ */}
+          {recordingData.status === 'error' && (
+            <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-red-400 font-medium mb-1">Error Loading Recording</p>
+                  <p className="text-sm text-red-300/80 mb-3">
+                    {recordingData.message}
+                  </p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Transcript */}

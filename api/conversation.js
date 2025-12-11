@@ -5,6 +5,13 @@ const REPLICA_ID = process.env.REPLICA_ID;
 const LEET_CODE_PERSONA_ID = process.env.LEET_CODE_PERSONA_ID;
 const GENERAL_RECRUITER_ID = process.env.GENERAL_RECRUITER_ID;
 
+// Check if recording is configured (requires AWS S3 setup)
+const isRecordingConfigured = !!(
+  process.env.AWS_ASSUME_ROLE_ARN &&
+  process.env.S3_BUCKET_REGION &&
+  process.env.S3_BUCKET_NAME
+);
+
 function generateSystemPrompt(config) {
   const hasDocuments = config.hasResume || config.hasJobDescription;
   const documentContext = hasDocuments
@@ -146,8 +153,15 @@ export default async function handler(req, res) {
       properties: {
         max_call_duration: 600,  // 10 minutes max
         participant_left_timeout: 30,
-        enable_recording: true,
+        enable_recording: isRecordingConfigured,  // Only enable if AWS S3 is configured
         language: 'english',
+
+        // Add S3 configuration only if recording is enabled
+        ...(isRecordingConfigured && {
+          aws_assume_role_arn: process.env.AWS_ASSUME_ROLE_ARN,
+          recording_s3_bucket_region: process.env.S3_BUCKET_REGION,
+          recording_s3_bucket_name: process.env.S3_BUCKET_NAME,
+        }),
       },
     };
 
@@ -186,6 +200,7 @@ export default async function handler(req, res) {
       conversationId: conversation.conversation_id,
       conversationUrl: conversation.conversation_url,
       documentIds: documentIds || [], // Return document IDs for tracking
+      recordingEnabled: isRecordingConfigured, // Let frontend know if recording is available
     });
 
   } catch (error) {
