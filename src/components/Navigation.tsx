@@ -15,26 +15,36 @@ export function Navigation({ currentScreen, onNavigate }: Props) {
   ];
 
   return (
-    <nav className="bg-slate-900 border-b border-slate-700/50">
+    <nav className="sticky top-0 z-nav backdrop-blur-md bg-slate-900/95 border-b border-slate-700/50">
       <div className="max-w-6xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Video className="w-6 h-6 text-blue-400" />
-            <span className="text-lg font-semibold text-white">AI Interview Coach</span>
-          </div>
-          <div className="flex gap-2">
+          <button
+            onClick={() => onNavigate('landing')}
+            className="flex items-center gap-2 group"
+          >
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Video className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-lg font-semibold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+              AI Interview Coach
+            </span>
+          </button>
+          <div className="flex gap-1">
             {navItems.map(({ screen, icon: Icon, label }) => (
               <button
                 key={screen}
                 onClick={() => onNavigate(screen)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium ${
+                className={`relative inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 font-medium ${
                   currentScreen === screen
-                    ? 'bg-blue-600 text-white'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-900/30'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                 }`}
               >
                 <Icon className="w-4 h-4" />
-                {label}
+                <span className="hidden sm:inline">{label}</span>
+                {currentScreen === screen && (
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-cyan-400 rounded-full"></div>
+                )}
               </button>
             ))}
           </div>

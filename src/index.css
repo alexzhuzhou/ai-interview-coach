@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Fade in animation */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -15,4 +16,94 @@
 
 .animate-fade-in {
   animation: fade-in 0.5s ease-out;
+}
+
+/* Fade in up animation (for scroll reveals) */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out;
+}
+
+/* Gradient animation */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* Pulse glow animation */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Typography Scale */
+.text-hero {
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.text-section {
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.text-subsection {
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+/* Z-Index System */
+.z-nav {
+  z-index: 50;
+}
+
+.z-modal {
+  z-index: 60;
+}
+
+.z-tooltip {
+  z-index: 70;
+}
+
+/* Responsive Typography */
+@media (max-width: 768px) {
+  .text-hero {
+    font-size: 2.5rem;
+  }
+
+  .text-section {
+    font-size: 2rem;
+  }
+
+  .text-subsection {
+    font-size: 1.5rem;
+  }
 }
