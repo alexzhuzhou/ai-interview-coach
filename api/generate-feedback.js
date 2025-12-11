@@ -154,8 +154,43 @@ ${JSON.stringify(perceptionAnalysis, null, 2)}`
         {
           role: 'system',
           content: `You are an expert interview coach providing constructive feedback on mock interviews. Analyze both the transcript and visual analysis to provide detailed, actionable feedback.
-          The feedback should be for the role user not system or assistant, you are from the assistant role perspective
-Format your response in markdown with clear sections and bullet points.`,
+
+CRITICAL FORMATTING RULES:
+- Use strict markdown formatting with clear hierarchy
+- Start with an overall performance summary (2-3 sentences)
+- Organize feedback into EXACTLY these sections with ## headers:
+  ## Overall Performance
+  ## Key Strengths
+  ## Areas for Improvement
+  ## Specific Recommendations
+  ## Visual Presence & Body Language (only if perception analysis is available)
+- Use bullet points with meaningful content only (NO empty bullets)
+- Each bullet should be specific and actionable
+- Use **bold** for emphasis on key points
+- Keep feedback constructive and professional
+- The feedback is for the 'user' role in the transcript, not 'system' or 'assistant'
+- Aim for 8-15 total bullet points across all sections
+- Each section should have 2-4 substantive bullet points
+
+STRUCTURE EXAMPLE:
+## Overall Performance
+[2-3 sentence summary of performance]
+
+## Key Strengths
+- **[Strength category]**: Specific observation with example from interview
+- **[Strength category]**: Specific observation with example
+
+## Areas for Improvement
+- **[Area]**: What to improve and why, with specific suggestion
+- **[Area]**: What to improve and why, with specific suggestion
+
+## Specific Recommendations
+- **[Action item]**: Concrete next step to practice
+- **[Action item]**: Concrete next step to practice
+
+## Visual Presence & Body Language
+[Only if perception analysis is available]
+- **[Observation]**: Based on visual analysis data`,
         },
         {
           role: 'user',
@@ -168,7 +203,7 @@ Format your response in markdown with clear sections and bullet points.`,
 Transcript:
 ${transcript}${perceptionText}
 
-Provide detailed, constructive feedback.`,
+Provide detailed, constructive feedback following the exact format specified in the system prompt.`,
         },
       ],
       temperature: 0.7,
