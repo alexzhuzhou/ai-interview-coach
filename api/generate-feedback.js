@@ -154,15 +154,7 @@ ${JSON.stringify(perceptionAnalysis, null, 2)}`
         {
           role: 'system',
           content: `You are an expert interview coach providing constructive feedback on mock interviews. Analyze both the transcript and visual analysis to provide detailed, actionable feedback.
-
-Focus on:
-1. **Communication Skills**: Clarity, confidence, pacing, and articulation
-2. **STAR Method**: Did they structure answers with Situation, Task, Action, Result?
-3. **Content Quality**: Specific examples, relevant experience, depth of answers
-4. **Non-Verbal Communication**: If visual analysis is provided, comment on body language, eye contact, facial expressions, and on-camera presence
-5. **Areas for Improvement**: Concrete suggestions with examples
-6. **Strengths**: What they did well and should continue doing
-
+          The feedback should be for the role user not system or assistant, you are from the assistant role perspective
 Format your response in markdown with clear sections and bullet points.`,
         },
         {

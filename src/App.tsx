@@ -3,6 +3,9 @@ import { LandingPage } from './components/LandingPage';
 import { SetupScreen } from './components/SetupScreen';
 import { InterviewScreen } from './components/InterviewScreen';
 import { FeedbackScreen } from './components/FeedbackScreen';
+import { Navigation } from './components/Navigation';
+import { ConversationHistory } from './components/ConversationHistory';
+import { ConversationDetailComponent } from './components/ConversationDetail';
 import { useConversation } from './hooks/useConversation';
 import type { AppScreen, InterviewConfig } from './types';
 
@@ -21,6 +24,7 @@ function App() {
   const sessionStartRef = useRef<Date | null>(null);
   const [sessionDuration, setSessionDuration] = useState(0);
   const [interviewConfig, setInterviewConfig] = useState<InterviewConfig | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
   const handleStartSetup = useCallback(() => {
     setScreen('setup');
@@ -65,9 +69,24 @@ function App() {
     setScreen('landing');
   }, [reset]);
 
-  switch (screen) {
-    case 'landing':
-      return <LandingPage onStart={handleStartSetup} />;
+  const handleNavigate = useCallback((newScreen: AppScreen) => {
+    setScreen(newScreen);
+  }, []);
+
+  const handleSelectConversation = useCallback((conversationId: string) => {
+    setSelectedConversationId(conversationId);
+    setScreen('conversation-detail');
+  }, []);
+
+  const handleBackToHistory = useCallback(() => {
+    setSelectedConversationId(null);
+    setScreen('history');
+  }, []);
+
+  const renderScreen = () => {
+    switch (screen) {
+      case 'landing':
+        return <LandingPage onStart={handleStartSetup} />;
 
     case 'setup':
       return (
@@ -98,6 +117,7 @@ function App() {
             duration={sessionDuration}
             conversationId=""
             interviewConfig={{
+              category: 'general',
               role: 'Unknown',
               industry: 'Technology',
               experienceLevel: 'mid',
@@ -118,9 +138,34 @@ function App() {
         />
       );
 
-    default:
-      return <LandingPage onStart={handleStartSetup} />;
-  }
+      case 'history':
+        return <ConversationHistory onSelectConversation={handleSelectConversation} />;
+
+      case 'conversation-detail':
+        if (!selectedConversationId) {
+          return <ConversationHistory onSelectConversation={handleSelectConversation} />;
+        }
+        return (
+          <ConversationDetailComponent
+            conversationId={selectedConversationId}
+            onBack={handleBackToHistory}
+          />
+        );
+
+      default:
+        return <LandingPage onStart={handleStartSetup} />;
+    }
+  };
+
+  // Show navigation only on certain screens
+  const showNavigation = screen === 'landing' || screen === 'history' || screen === 'conversation-detail';
+
+  return (
+    <>
+      {showNavigation && <Navigation currentScreen={screen} onNavigate={handleNavigate} />}
+      {renderScreen()}
+    </>
+  );
 }
 
 export default App;

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, RotateCcw, Home, Loader2, AlertCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import type { InterviewConfig } from '../types';
 
 interface Props {
@@ -53,45 +54,6 @@ export function FeedbackScreen({ duration, conversationId, interviewConfig, onRe
     loadFeedback();
   }, [conversationId, interviewConfig]);
 
-  // Simple markdown-to-React renderer for basic formatting
-  const renderMarkdown = (text: string) => {
-    const lines = text.split('\n');
-    const elements: React.ReactNode[] = [];
-    let i = 0;
-
-    while (i < lines.length) {
-      const line = lines[i];
-
-      // Headers
-      if (line.startsWith('# ')) {
-        elements.push(<h1 key={i} className="text-2xl font-bold mb-4 mt-6">{line.slice(2)}</h1>);
-      } else if (line.startsWith('## ')) {
-        elements.push(<h2 key={i} className="text-xl font-semibold mb-3 mt-5">{line.slice(3)}</h2>);
-      } else if (line.startsWith('### ')) {
-        elements.push(<h3 key={i} className="text-lg font-semibold mb-2 mt-4">{line.slice(4)}</h3>);
-      }
-      // Bold text
-      else if (line.startsWith('**') && line.endsWith('**')) {
-        elements.push(<p key={i} className="font-bold mb-2">{line.slice(2, -2)}</p>);
-      }
-      // Bullet points
-      else if (line.startsWith('- ') || line.startsWith('* ')) {
-        elements.push(<li key={i} className="ml-4 mb-1">{line.slice(2)}</li>);
-      }
-      // Empty lines
-      else if (line.trim() === '') {
-        elements.push(<div key={i} className="h-2" />);
-      }
-      // Regular paragraphs
-      else if (line.trim()) {
-        elements.push(<p key={i} className="mb-2">{line}</p>);
-      }
-
-      i++;
-    }
-
-    return <div className="prose prose-invert max-w-none">{elements}</div>;
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-6">
@@ -135,9 +97,25 @@ export function FeedbackScreen({ duration, conversationId, interviewConfig, onRe
 
           {!loading && !error && feedback && (
             <div className="text-left">
-              <h3 className="text-xl font-bold mb-4 text-blue-400">AI-Generated Feedback</h3>
-              <div className="text-slate-200 space-y-3">
-                {renderMarkdown(feedback)}
+              <div className="prose prose-invert prose-slate max-w-none">
+                <ReactMarkdown
+                  components={{
+                    h1: ({ children }) => <h1 className="text-2xl font-bold mb-4 mt-6 text-white">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-xl font-semibold mb-3 mt-5 text-white">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-lg font-semibold mb-2 mt-4 text-white">{children}</h3>,
+                    h4: ({ children }) => <h4 className="text-base font-semibold mb-2 mt-3 text-white">{children}</h4>,
+                    p: ({ children }) => <p className="mb-3 text-slate-200 leading-relaxed">{children}</p>,
+                    ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1 text-slate-200">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1 text-slate-200">{children}</ol>,
+                    li: ({ children }) => <li className="text-slate-200">{children}</li>,
+                    strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
+                    em: ({ children }) => <em className="italic text-slate-300">{children}</em>,
+                    code: ({ children }) => <code className="bg-slate-700 px-1.5 py-0.5 rounded text-sm text-blue-300">{children}</code>,
+                    pre: ({ children }) => <pre className="bg-slate-700 p-4 rounded-lg overflow-x-auto mb-3">{children}</pre>,
+                  }}
+                >
+                  {feedback}
+                </ReactMarkdown>
               </div>
             </div>
           )}
