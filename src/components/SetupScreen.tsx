@@ -37,6 +37,7 @@ const INTERVIEW_TYPES = [
 export function SetupScreen({ onBack, onStart, isLoading, error }: Props) {
   const [config, setConfig] = useState<InterviewConfig>({
     category: 'general',
+    userName: '',
     role: '',
     industry: 'Technology',
     experienceLevel: 'mid',
@@ -102,7 +103,7 @@ export function SetupScreen({ onBack, onStart, isLoading, error }: Props) {
     return () => clearInterval(interval);
   }, [selectedResumeId, selectedJobDescId, config.category]);
 
-  const isValid = config.category === 'leetcode' || config.role.trim().length > 0;
+  const isValid = config.userName.trim().length > 0 && (config.category === 'leetcode' || config.role.trim().length > 0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,6 +181,20 @@ export function SetupScreen({ onBack, onStart, isLoading, error }: Props) {
                   </div>
                 </button>
               </div>
+            </div>
+
+            {/* Your Name Input (Always Required) */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Your Name *
+              </label>
+              <input
+                type="text"
+                value={config.userName}
+                onChange={(e) => setConfig({ ...config, userName: e.target.value })}
+                placeholder="e.g., Alex Johnson"
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
 
             {/* Conditional Fields for General Interview */}

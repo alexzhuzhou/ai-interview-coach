@@ -106,6 +106,7 @@ function App() {
       return (
         <InterviewScreen
           conversationUrl={conversationUrl}
+          userName={interviewConfig?.userName || 'Candidate'}
           onEnd={handleEndInterview}
         />
       );
@@ -119,6 +120,7 @@ function App() {
             conversationId=""
             interviewConfig={{
               category: 'general',
+              userName: 'Candidate',
               role: 'Unknown',
               industry: 'Technology',
               experienceLevel: 'mid',

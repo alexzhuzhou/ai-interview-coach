@@ -4,10 +4,11 @@ import { Phone, Clock, AlertCircle } from 'lucide-react';
 
 interface Props {
   conversationUrl: string;
+  userName: string;
   onEnd: () => void;
 }
 
-export function InterviewScreen({ conversationUrl, onEnd }: Props) {
+export function InterviewScreen({ conversationUrl, userName, onEnd }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const callRef = useRef<DailyCall | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -77,7 +78,10 @@ export function InterviewScreen({ conversationUrl, onEnd }: Props) {
           setError('Connection error. Please try again.');
         });
 
-        await call.join({ url: conversationUrl });
+        await call.join({
+          url: conversationUrl,
+          userName: userName
+        });
       } catch (err) {
         console.error('Failed to join:', err);
         setError('Failed to connect to interview. Please try again.');
@@ -98,7 +102,7 @@ export function InterviewScreen({ conversationUrl, onEnd }: Props) {
         }
       }
     };
-  }, [conversationUrl, handleLeave]);
+  }, [conversationUrl, userName, handleLeave]);
 
   // Warning at 8 minutes (480 seconds) - 2 min before max
   const showTimeWarning = elapsedTime >= 480 && elapsedTime < 600;

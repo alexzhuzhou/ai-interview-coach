@@ -47,7 +47,7 @@ END THE INTERVIEW:
 
 function generateGreeting(config, category) {
   if (category === 'leetcode') {
-    return "Hi there! Ready to solve some coding problems together? Let's get started!";
+    return "Hi there! Thanks for joining me today. Ready to solve some coding problems together? ";
   }
   return `Hi there! Thanks for joining me today. I'm excited to learn more about you and your interest in the ${config.role} position. Let's get started - are you ready?`;
 }
@@ -114,7 +114,8 @@ export default async function handler(req, res) {
         body: JSON.stringify(patchOperations),
       });
 
-      if (!patchResponse.ok) {
+      // 304 Not Modified is a success case - persona is already in desired state
+      if (!patchResponse.ok && patchResponse.status !== 304) {
         const error = await patchResponse.text();
         console.error('Persona patch failed:', {
           status: patchResponse.status,
@@ -128,7 +129,11 @@ export default async function handler(req, res) {
         });
       }
 
-      console.log('Persona patched successfully');
+      if (patchResponse.status === 304) {
+        console.log('Persona already up-to-date (304 Not Modified)');
+      } else {
+        console.log('Persona patched successfully');
+      }
     } else {
       return res.status(400).json({ error: 'Invalid interview category' });
     }
