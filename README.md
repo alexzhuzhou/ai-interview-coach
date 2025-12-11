@@ -151,7 +151,7 @@ Interview recording is **completely optional**. The app works perfectly without 
    - **Bucket name**: `tavus-interview-recordings` (or your choice)
    - **Region**: `us-east-1` (or your preferred region)
    - **Block Public Access**: Leave enabled (we'll use presigned URLs)
-   - **Bucket Versioning**: ✅ **Enable** (required by Tavus)
+   - **Bucket Versioning**:  **Enable** (required by Tavus)
 4. Click **Create bucket**
 
 ### Step 2: Enable CORS on S3 Bucket
@@ -205,7 +205,7 @@ Interview recording is **completely optional**. The app works perfectly without 
 3. Configuration:
    - **Account ID**: `291871421005` (Tavus's AWS account)
    - **External ID**: `tavus` (**required!**)
-   - ✅ Check **Require external ID**
+   -  Check **Require external ID**
    - **Maximum session duration**: 12 hours
 4. Attach the `TavusRecordingAccess` policy
 5. **Role name**: `TavusRecordingRole`
@@ -253,11 +253,11 @@ AWS_SECRET_ACCESS_KEY=your_secret_key
 
 | Status | What It Means |
 |--------|---------------|
-| ✅ **Ready** | Recording available, click to watch |
-| ⏳ **Processing** | Tavus is still processing (wait 2-5 min) |
-| ℹ️ **Not Available** | No recording (old interview or recording disabled) |
-| ⚙️ **Not Configured** | AWS not set up (recording disabled) |
-| ❌ **Error** | Something went wrong (check S3 permissions) |
+|  **Ready** | Recording available, click to watch |
+|  **Processing** | Tavus is still processing (wait 2-5 min) |
+|  **Not Available** | No recording (old interview or recording disabled) |
+|  **Not Configured** | AWS not set up (recording disabled) |
+|  **Error** | Something went wrong (check S3 permissions) |
 
 ## API Flow Details
 
@@ -304,41 +304,6 @@ AWS_SECRET_ACCESS_KEY=your_secret_key
    - `message`: User-friendly status description
 6. For old conversations (>2 hours), marks as "not_available" instead of "processing"
 
-## Deployment
-
-Deploy to Vercel with one click or via CLI:
-
-```bash
-vercel --prod
-```
-
-Ensure these environment variables are set in your Vercel project settings:
-
-**Required:**
-- `TAVUS_API_KEY`
-- `REPLICA_ID`
-- `LEET_CODE_PERSONA_ID`
-- `GENERAL_RECRUITER_ID`
-- `OPENAI_API_KEY`
-
-**Optional (for recording):**
-- `AWS_ASSUME_ROLE_ARN`
-- `S3_BUCKET_NAME`
-- `S3_BUCKET_REGION`
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-
-## Key Benefits of This Architecture
-
-✅ **Secure** - All API keys stay server-side, never exposed to browser
-✅ **Serverless** - No infrastructure management, scales automatically
-✅ **Type-safe** - Full TypeScript coverage with shared types
-✅ **Modern stack** - React 19, Vite, Tailwind CSS v3
-✅ **Rich feedback** - Combines transcript analysis with visual perception data
-✅ **History tracking** - Full conversation history with detailed analytics
-✅ **Video recordings** - Optional AWS S3 integration for playback
-✅ **Graceful degradation** - Works perfectly without optional features
-✅ **Document context** - Resume/job description integration via Tavus Knowledge Base
 
 ## User Flow
 
@@ -362,27 +327,7 @@ Ensure these environment variables are set in your Vercel project settings:
    - See full transcripts and perception analysis
    - **Watch video recordings** (if AWS S3 is configured)
 
-## Known Limitations / Next Steps
 
-**Implemented Features:**
-- ✅ ~~No persistence of interview history or feedback~~ - **IMPLEMENTED**: Full history with transcripts and perception analysis
-- ✅ ~~No video recording~~ - **IMPLEMENTED**: AWS S3 integration with presigned URLs
-- ✅ ~~Conversations not sorted~~ - **IMPLEMENTED**: Newest first, up to 100 conversations
-- ✅ ~~No document upload~~ - **IMPLEMENTED**: Resume and job description integration
-
-**Future Enhancements:**
-- No user authentication (all conversations visible to everyone using the same API key)
-- No pagination for conversation history (currently limited to 100)
-- No filtering options in conversation history (status, date range, etc.)
-- No search functionality in conversation history
-- Retry logic in feedback generation could be more sophisticated
-- Add automated tests (currently none)
-- Consider rate limiting for API endpoints
-- Add download/export options for transcripts, feedback, and recordings
-- Add user authentication for multi-user support
-- Add ability to share recordings with others (shareable links)
-- Add recording download feature
-- Add recording deletion capability
 
 ## Troubleshooting
 
