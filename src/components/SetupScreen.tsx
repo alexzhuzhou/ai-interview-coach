@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Briefcase, Code, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, ArrowRight, Briefcase, Code, Users, FileText } from 'lucide-react';
 import type { InterviewConfig } from '../types';
+import { DocumentManager } from './DocumentManager';
 
 interface Props {
   onBack: () => void;
@@ -42,12 +43,78 @@ export function SetupScreen({ onBack, onStart, isLoading, error }: Props) {
     interviewType: 'mixed',
   });
 
+  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const [selectedJobDescId, setSelectedJobDescId] = useState<string | null>(null);
+  const [documentsReady, setDocumentsReady] = useState(true);
+  const [checkingDocuments, setCheckingDocuments] = useState(false);
+
+  const handleDocumentsSelected = (resumeId: string | null, jobDescId: string | null) => {
+    setSelectedResumeId(resumeId);
+    setSelectedJobDescId(jobDescId);
+  };
+
+  // Check if selected documents are ready
+  useEffect(() => {
+    // Only run if in general mode and documents are selected
+    if (config.category !== 'general' || (!selectedResumeId && !selectedJobDescId)) {
+      setDocumentsReady(true);
+      return;
+    }
+
+    const checkDocumentStatus = async () => {
+      setCheckingDocuments(true);
+      try {
+        const response = await fetch('/api/list-documents');
+        if (!response.ok) {
+          console.warn('Failed to fetch documents:', response.statusText);
+          setDocumentsReady(true); // Allow interview to proceed
+          setCheckingDocuments(false);
+          return;
+        }
+
+        const data = await response.json();
+        const allDocuments = data.documents || [];
+
+        // Ensure allDocuments is an array
+        if (!Array.isArray(allDocuments)) {
+          console.warn('Documents response is not an array');
+          setDocumentsReady(true); // Allow interview to proceed
+          setCheckingDocuments(false);
+          return;
+        }
+
+        const selectedDocs = allDocuments.filter(
+          (doc: any) => doc.document_id === selectedResumeId || doc.document_id === selectedJobDescId
+        );
+
+        const allReady = selectedDocs.every((doc: any) => doc.status === 'ready');
+        setDocumentsReady(allReady);
+      } catch (err) {
+        console.error('Failed to check document status:', err);
+        setDocumentsReady(true); // Allow interview to proceed despite error
+      } finally {
+        setCheckingDocuments(false);
+      }
+    };
+
+    checkDocumentStatus();
+    const interval = setInterval(checkDocumentStatus, 5000); // Check every 5 seconds (reduced frequency)
+    return () => clearInterval(interval);
+  }, [selectedResumeId, selectedJobDescId, config.category]);
+
   const isValid = config.category === 'leetcode' || config.role.trim().length > 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isValid && !isLoading) {
-      onStart(config);
+    if (isValid && !isLoading && documentsReady) {
+      const documentIds: string[] = [];
+      if (selectedResumeId) documentIds.push(selectedResumeId);
+      if (selectedJobDescId) documentIds.push(selectedJobDescId);
+
+      onStart({
+        ...config,
+        documentIds: documentIds.length > 0 ? documentIds : undefined,
+      });
     }
   };
 
@@ -195,6 +262,27 @@ export function SetupScreen({ onBack, onStart, isLoading, error }: Props) {
                 ))}
               </select>
             </div>
+
+            {/* Document Manager */}
+            <div className="border-t border-slate-600 pt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <FileText className="w-5 h-5 text-blue-400" />
+                <h3 className="text-lg font-semibold">Documents (Optional)</h3>
+              </div>
+              <p className="text-sm text-slate-400 mb-4">
+                Add links to your resume and job description for a more personalized interview experience.
+              </p>
+              <DocumentManager onDocumentsSelected={handleDocumentsSelected} />
+
+              {/* Document Processing Status */}
+              {(selectedResumeId || selectedJobDescId) && !documentsReady && (
+                <div className="mt-4 bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-3">
+                  <p className="text-yellow-400 text-sm">
+                    {checkingDocuments ? 'Checking document status...' : 'Documents are still processing. Please wait...'}
+                  </p>
+                </div>
+              )}
+            </div>
               </>
             )}
 
@@ -210,13 +298,18 @@ export function SetupScreen({ onBack, onStart, isLoading, error }: Props) {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={!isValid || isLoading}
+              disabled={!isValid || isLoading || !documentsReady}
               className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-6 py-4 rounded-xl text-lg font-semibold transition-all"
             >
               {isLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   Starting Interview...
+                </>
+              ) : !documentsReady ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Waiting for documents...
                 </>
               ) : (
                 <>

@@ -6,7 +6,16 @@ const LEET_CODE_PERSONA_ID = process.env.LEET_CODE_PERSONA_ID;
 const GENERAL_RECRUITER_ID = process.env.GENERAL_RECRUITER_ID;
 
 function generateSystemPrompt(config) {
-  return `You are an experienced hiring manager conducting a ${config.interviewType} interview for a ${config.experienceLevel} ${config.role} position in the ${config.industry} industry.
+  const hasDocuments = config.hasResume || config.hasJobDescription;
+  const documentContext = hasDocuments
+    ? `\n\nDOCUMENT CONTEXT:
+${config.hasResume ? '- You have access to the candidate\'s resume. Use it to ask specific questions about their experience and background.' : ''}
+${config.hasJobDescription ? '- You have access to the job description. Tailor your questions to assess fit for this specific role and its requirements.' : ''}
+- Reference specific details from these documents naturally in your questions
+- Assess how well the candidate's experience aligns with the role requirements`
+    : '';
+
+  return `You are an experienced hiring manager conducting a ${config.interviewType} interview for a ${config.experienceLevel} ${config.role} position in the ${config.industry} industry.${documentContext}
 
 INTERVIEW GUIDELINES:
 - Start with a warm, professional greeting and brief introduction
@@ -63,9 +72,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { category, role, industry, experienceLevel, interviewType } = req.body;
+    const { category, role, industry, experienceLevel, interviewType, documentIds } = req.body;
 
-    console.log('Starting interview:', { category, role, industry, experienceLevel, interviewType });
+    console.log('Starting interview:', { category, role, industry, experienceLevel, interviewType, documentIds });
 
     let personaId;
 
@@ -79,16 +88,20 @@ export default async function handler(req, res) {
       personaId = GENERAL_RECRUITER_ID;
       console.log('Patching General Recruiter persona:', personaId);
 
+      // Determine if we have resume and/or job description from documentIds
+      const hasResume = documentIds && documentIds.length > 0;
+      const hasJobDescription = documentIds && documentIds.length > 1; // Assume 2 docs = resume + JD
+
       const patchOperations = [
         {
           op: 'replace',
           path: '/system_prompt',
-          value: generateSystemPrompt({ role, industry, experienceLevel, interviewType })
+          value: generateSystemPrompt({ role, industry, experienceLevel, interviewType, hasResume, hasJobDescription })
         },
         {
           op: 'replace',
           path: '/context',
-          value: `Interviewing for: ${role} in ${industry}. Candidate level: ${experienceLevel}. Interview type: ${interviewType}.`
+          value: `Interviewing for: ${role} in ${industry}. Candidate level: ${experienceLevel}. Interview type: ${interviewType}.${hasResume || hasJobDescription ? ' Documents provided for context.' : ''}`
         }
       ];
 
@@ -121,23 +134,31 @@ export default async function handler(req, res) {
     }
 
     // Create conversation with the selected/patched persona
+    const conversationBody = {
+      replica_id: REPLICA_ID,
+      persona_id: personaId,
+      custom_greeting: generateGreeting({ role, industry, experienceLevel, interviewType }, category),
+      properties: {
+        max_call_duration: 600,  // 10 minutes max
+        participant_left_timeout: 30,
+        enable_recording: true,
+        language: 'english',
+      },
+    };
+
+    // Add document_ids if provided (for General interviews with resume/JD)
+    if (documentIds && documentIds.length > 0) {
+      conversationBody.document_ids = documentIds;
+      console.log('Including documents in conversation:', documentIds);
+    }
+
     const conversationResponse = await fetch(`${TAVUS_BASE_URL}/conversations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': TAVUS_API_KEY,
       },
-      body: JSON.stringify({
-        replica_id: REPLICA_ID,
-        persona_id: personaId,
-        custom_greeting: generateGreeting({ role, industry, experienceLevel, interviewType }, category),
-        properties: {
-          max_call_duration: 600,  // 10 minutes max
-          participant_left_timeout: 30,
-          enable_recording: true,
-          language: 'english',
-        },
-      }),
+      body: JSON.stringify(conversationBody),
     });
 
     if (!conversationResponse.ok) {
@@ -159,6 +180,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       conversationId: conversation.conversation_id,
       conversationUrl: conversation.conversation_url,
+      documentIds: documentIds || [], // Return document IDs for tracking
     });
 
   } catch (error) {

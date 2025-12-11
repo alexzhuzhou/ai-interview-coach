@@ -6,6 +6,7 @@ import { FeedbackScreen } from './components/FeedbackScreen';
 import { Navigation } from './components/Navigation';
 import { ConversationHistory } from './components/ConversationHistory';
 import { ConversationDetailComponent } from './components/ConversationDetail';
+import { DocumentsScreen } from './components/DocumentsScreen';
 import { useConversation } from './hooks/useConversation';
 import type { AppScreen, InterviewConfig } from './types';
 
@@ -152,13 +153,16 @@ function App() {
           />
         );
 
+      case 'documents':
+        return <DocumentsScreen onBack={handleHome} />;
+
       default:
         return <LandingPage onStart={handleStartSetup} />;
     }
   };
 
   // Show navigation only on certain screens
-  const showNavigation = screen === 'landing' || screen === 'history' || screen === 'conversation-detail';
+  const showNavigation = screen === 'landing' || screen === 'history' || screen === 'conversation-detail' || screen === 'documents';
 
   return (
     <>

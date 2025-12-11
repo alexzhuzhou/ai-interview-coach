@@ -1,4 +1,4 @@
-import { Home, Video, History } from 'lucide-react';
+import { Home, Video, History, FileText } from 'lucide-react';
 import type { AppScreen } from '../types';
 
 interface Props {
@@ -10,6 +10,7 @@ export function Navigation({ currentScreen, onNavigate }: Props) {
   const navItems = [
     { screen: 'landing' as AppScreen, icon: Home, label: 'Home' },
     { screen: 'setup' as AppScreen, icon: Video, label: 'New Interview' },
+    { screen: 'documents' as AppScreen, icon: FileText, label: 'Documents' },
     { screen: 'history' as AppScreen, icon: History, label: 'History' },
   ];
 

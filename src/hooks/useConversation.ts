@@ -39,6 +39,7 @@ export function useConversation() {
         conversationUrl: data.conversationUrl,
         error: null,
         startTime: new Date(),
+        documentIds: data.documentIds || [], // Store document IDs for tracking
       });
 
       return data;

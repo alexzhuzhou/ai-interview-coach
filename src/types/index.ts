@@ -4,6 +4,7 @@ export interface InterviewConfig {
   industry: string;
   experienceLevel: 'entry' | 'mid' | 'senior' | 'executive';
   interviewType: 'behavioral' | 'technical' | 'mixed';
+  documentIds?: string[]; // Optional: resume and job description document IDs
 }
 
 export interface ConversationState {
@@ -12,9 +13,10 @@ export interface ConversationState {
   conversationUrl: string | null;
   error: string | null;
   startTime: Date | null;
+  documentIds?: string[]; // Track which documents were used in this conversation
 }
 
-export type AppScreen = 'landing' | 'setup' | 'interview' | 'feedback' | 'history' | 'conversation-detail';
+export type AppScreen = 'landing' | 'setup' | 'interview' | 'feedback' | 'history' | 'conversation-detail' | 'documents';
 
 // Conversation History Types
 export interface ConversationListItem {
@@ -81,4 +83,30 @@ export interface ConversationDetail {
   replica_id: string;
   persona_id: string;
   events?: ConversationEvent[];
+  document_ids?: string[]; // Documents used in this conversation
+}
+
+// Tavus Knowledge Base Document Types
+export interface TavusDocument {
+  document_id: string;
+  document_name: string;
+  document_url?: string;
+  status: 'processing' | 'ready' | 'failed';
+  created_at: string;
+  updated_at: string;
+  tags?: string[];
+  properties?: Record<string, unknown>;
+}
+
+export interface UploadDocumentRequest {
+  file?: File;
+  text?: string;
+  documentName: string;
+  tags: string[];
+}
+
+export interface UploadDocumentResponse {
+  document_id: string;
+  document_name: string;
+  status: string;
 }
